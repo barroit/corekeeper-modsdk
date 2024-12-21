@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -18,9 +19,12 @@ namespace PugMod
 				@"C:\Program Files (x86)\Steam\steamapps\common\Core Keeper",
 				@"D:\Steam\steamapps\common\Core Keeper",
 				@"E:\Steam\steamapps\common\Core Keeper",
+				@".local/share/Steam/steamapps/common/Core Keeper",
 			};
 
 			private DropdownField _gamePathDropDown;
+			private bool _dropDownFilled;
+
 			private Button _browseButton;
 			private Button _updateButton;
 
@@ -30,20 +34,9 @@ namespace PugMod
 				_browseButton = root.Q<Button>("UpdateSDKChooseGamePathManually");
 				_updateButton = root.Q<Button>("UpdateSDKUpdateButton");
 
-				_gamePathDropDown.choices = new();
-
-				foreach (var path in _pathsToCheck)
+				if (!_dropDownFilled)
 				{
-					if ((_gamePathDropDown.choices == null || !_gamePathDropDown.choices.Contains(path))
-						&& VerifyPath(path, true))
-					{
-						if (_gamePathDropDown.choices == null)
-						{
-							_gamePathDropDown.choices = new List<string>();
-						}
-
-						_gamePathDropDown.choices.Add(path);
-					}
+					PopulateGamePathDropDown();
 				}
 
 				if (EditorPrefs.HasKey(GAME_INSTALL_PATH_KEY))
@@ -83,6 +76,33 @@ namespace PugMod
 					Debug.Log($"Should have updated SDK files from {_gamePathDropDown.text}, skipping since not SDK project");
 #endif
 				};
+			}
+
+			private void PopulateGamePathDropDown()
+			{
+				if (_gamePathDropDown.choices == null)
+				{
+					_gamePathDropDown.choices = new List<string>();
+				}
+
+				string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+				foreach (var path in _pathsToCheck)
+				{
+					string name = path;
+
+					if (!Path.IsPathFullyQualified(path))
+					{
+						name = Path.Combine(home, path);
+					}
+
+					if (!_gamePathDropDown.choices.Contains(name) && VerifyPath(name, true))
+					{
+						_gamePathDropDown.choices.Add(name);
+					}
+				}
+
+				_dropDownFilled = true;
 			}
 
 			private void OpenFolderPanel()
